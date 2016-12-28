@@ -1,0 +1,16 @@
+{
+  "paths":
+           {"train" : "../data/train.csv",
+           "test" : "../data/test.csv"}
+          ,
+  "fill_dict":
+            {"NoBsmt": ["BsmtFinType1", "BsmtCond", "BsmtFinType2", "BsmtExposure", "BsmtQual"],
+             "NoGarage": ["GarageCond", "GarageQual", "GarageFinish", "GarageType"],
+             "NoPool": ["PoolQC"],
+             "NoFirePlace": ["FireplaceQu"],
+             "NoFence":["Fence"],
+             "NoAccess": ["Alley"],
+             "None": ["MiscFeature", "MasVnrType"]
+             }
+
+}
