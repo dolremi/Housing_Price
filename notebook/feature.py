@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import skew, mode
 from sklearn.preprocessing import LabelEncoder, Normalizer, Imputer
-
-
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pickle
 def simple_explore(data):
     if not isinstance(data, pd.DataFrame):
         raise ValueError("The passing dataset is not a DataFrame")
@@ -108,7 +109,7 @@ class DataCleaner(object):
         self.all_data = self._union_datasets()
         print("Now after the training and test data have been combined:")
         simple_explore(self.all_data)
-        self.cols = self._calculate_null()
+        self.cols = list(self._calculate_null().index)
 
     def _union_datasets(self):
 
@@ -130,12 +131,26 @@ class DataCleaner(object):
 
     def _calculate_null(self):
         columns = self.all_data.isnull().sum()
-        return list(columns[columns > 0].index)
+        return columns[columns > 0]
+
+    def _find_pred(self):
+        train_cols = self.train.columns.values
+        test_cols = self.test.columns.values
+        return list(set(train_cols).difference(set(test_cols)))[0]
+
+    def prep_for_learn(self):
+        X = pd.get_dummies(self.all_data, sparse = True)
+        X = X.fillna(0)
+        X_train = X[:self.train.shape[0]]
+        X_test = X[self.train.shape[0]:]
+        y = self.train[self._find_pred()]
+        return X_train, X_test, y
+
 
     def current_na(self):
         if self.cols:
             print("Now the column name(s) that have empty values are:")
-            print(self.cols)
+            print(self._calculate_null())
         else:
             print("There are no empty values in the dataset.")
 
@@ -153,6 +168,7 @@ class DataCleaner(object):
                         print("{0} is not a column in the dataset.".format(item))
             else:
                 print("To replace NA values with {0}, a list needs to be specified.".format(key))
+        self.current_na()
 
     def fill_na_group(self, group):
         if not isinstance(group, dict):
@@ -175,6 +191,8 @@ class DataCleaner(object):
             else:
                 print("{0} is not a column in the dataset.".format(key[0]))
 
+        self.current_na()
+
     def fill_na_gen(self):
         if not isinstance(self.cols, (pd.Series, pd.DataFrame, list)):
             raise TypeError("The passing column is not a right data type.")
@@ -186,27 +204,45 @@ class DataCleaner(object):
             else:
                 self.all_data[val].fillna(self.all_data[val].median(), inplace=True)
             self.cols.remove(val)
+        self.current_na()
 
-    def fill_values(self, spec):
+    def interpret_value(self, spec):
         if not isinstance(spec, dict):
             raise TypeError("A dictionary needs to be passed to specify the columns to be replaced.")
 
-        for key, val in spec.items():
-            if isinstance(val, list):
-                for item in val:
-                    if item[0] in self.all_data.columns.values and item[1] in self.all_data.columns.values:
-                        self.all_data.loc[self.all_data[item[0]] == key[0], item[1]] = key[1]
-                    else:
-                        print("{0} or {1} is not a column in the dataset.".format(item[0], item[1]))
-            else:
-                print("To fill the value {0} with the occurrence of {1} in the corresponding column, "
-                      "a list needs to be specified".format(key[1], key[0]))
+        self.all_data.replace(spec, inplace=True)
 
-    def simple_convert(self, columns, convert_dict):
-        if columns and isinstance(columns, list):
-            for item in columns:
-                if item in self.all_data.columns.values:
-                    self.all_data[item] = self.all_data[item].apply(lambda x: item + "_" + str(x))
+    def normalize_numerical(self, display, exclusion):
+        if not isinstance(exclusion, list):
+            raise TypeError("The exclusion needs to be a list")
 
-        if convert_dict and isinstance(convert_dict, dict):
-            self.all_data.replace(convert_dict)
+        for col in self.all_data.columns.values:
+            if self.all_data[col].dtypes != "object" and col not in exclusion:
+                median = self.all_data[col].median()
+                outliers = np.where(is_outlier(self.all_data[col]))
+                self.all_data[col].iloc[outliers] = median
+
+                if skew(self.all_data[col]) > 0.75:
+                    original = pd.Series(self.all_data[col])
+                    self.all_data[col] = np.log1p(self.all_data[col])
+                    if display:
+                        plt.figure(figsize=(10, 5))
+                        plt.subplot(1, 2, 1)
+                        sns.distplot(original, color='r', hist_kws={'alpha': 0.8})
+                        plt.title("Original data")
+                        plt.xlabel(col)
+
+                        plt.subplot(1, 2, 2)
+                        sns.distplot(self.all_data[col], color='r', hist_kws={'alpha': 0.8})
+                        plt.title("Natural log of data")
+                        plt.xlabel("Natural log of " + col)
+                        plt.tight_layout()
+
+    def save_learning(self, filename):
+        X_train, X_test, y = self.prep_for_learn()
+        data = {'X_train': X_train, 'X_test': X_test, 'y': y}
+        try:
+            with open(filename, 'wb') as f:
+                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        except Exception as e:
+            print('Unable to save data to', filename, ':', e)
