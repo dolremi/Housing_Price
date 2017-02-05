@@ -126,15 +126,20 @@ exclusion = ['Street', 'PravedDrive', 'Fence', 'GarageCond', 'GarageQual', 'Gara
              'CentralAir', 'KitchenQual', 'Functional', 'FireplaceQu', 'OverallQual', 'OverallCond','YearBuilt',
              'YearRemodAdd','GarageYrBlt', 'MoSold', 'YrSold']
 
-group = {("GarageType", "Detchd"): ["GarageArea", "GarageCars"] }
+group = {("GarageType", "Detchd"): ["GarageArea", "GarageCars"]}
 
 value_matching = {
     ("NoBsmt", 0): [("BsmtFinType1", "BsmtFinSF1"), ("BsmtFinType2", "BsmtFinSF2"), ("BsmtQual", "TotalBsmtSF"),
                     ("BsmtQual", "BsmtUnfSF")
                     ],
-    ("None", 0):[("MasVnrType","MasVnrArea")]
+    ("None", 0):[("MasVnrType","MasVnrArea")],
+    ("NoGarage", 0) : [("GarageType", "GarageCars"), ("GarageType", "GarageArea")],
+    ("NoPool", 0): [("PoolQC", "PoolArea")],
+    ("NoFirePlace", 0): [('FireplaceQu', "Fireplaces")]
 
 }
+
+mapping = {("None", 0): ["MiscFeature", "MiscVal"]}
 
 
 fill_cols = ["MSZoning", "BsmtUnfSF", "Electrical","KitchenQual",
@@ -142,18 +147,9 @@ fill_cols = ["MSZoning", "BsmtUnfSF", "Electrical","KitchenQual",
 
 def main():
     # read in the train and test data
+    cleaner = feature.DataCleaner("data.json")
     with open("data.json") as data_file:
         data = json.load(data_file)
-    train = pd.read_csv(data["paths"]["train"])
-    test = pd.read_csv(data["paths"]["test"])
-
-    print("Looking for the null value in the training dataset...")
-    feature.simple_explore(train)
-
-    print("Looking for the null value in the test dataset...")
-    feature.simple_explore(test)
-
-    cleaner = feature.DataCleaner(train, test)
     cleaner.fill_na_spec(data["fill_dict"])
     cleaner.fill_na_group(group)
     cleaner.fill_na_gen()

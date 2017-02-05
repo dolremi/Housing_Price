@@ -11,6 +11,7 @@
              "NoFence":["Fence"],
              "NoAccess": ["Alley"],
              "None": ["MiscFeature", "MasVnrType"]
-             }
+             },
+  "test": "test_data.p"
 
 }
