@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 import pickle
 import os
 import json
+from Visualization import Display
 
 
-class data_stream(object):
+class DataStream(object):
     """
     This class consists of all functions for the data load and save and prepare for the learning.
     For data load:
@@ -26,7 +27,7 @@ class data_stream(object):
     For data saving:
     """
     @staticmethod
-    def load_data(filename, unpickling):
+    def load_data(filename, unpickling=None):
         """
         Two ways to load data: from JSON file, from a Python object structure
         :param filename: a valid JSON file which contains the training and test data paths
@@ -50,10 +51,10 @@ class data_stream(object):
                 print("Unable to load the data from", data[unpickling], ":", e)
         else:
             train_path = data["paths"]["train"]
-            train = data_stream.data_load(train_path, "csv")
+            train = DataStream.data_load(train_path, "csv")
             test_path = data["paths"]["test"]
-            test = data_stream.data_load(test_path, "csv")
-            all_data = DataCleaner.union_datasets(train, test)
+            test = DataStream.data_load(test_path, "csv")
+            all_data = DataStream.union_datasets(train, test)
             return train, test, all_data
 
     @staticmethod
@@ -103,6 +104,34 @@ class data_stream(object):
             print("Unable to add new file path to ", json_file, ":", e)
 
     @staticmethod
+    def union_datasets(train, test):
+        """
+        Combine the training and test data with common columns if exists
+        :param train: training data set as Pandas DataFrame
+        :param test: test data set as Pandas DataFrame
+        :return: a Pandas DataFrame combine training and test data with common columns
+        """
+        if not isinstance(train, pd.DataFrame):
+            raise TypeError("Training data is not a valid Pandas DataFrame.")
+        if not isinstance(test, pd.DataFrame):
+            raise TypeError("Test data is not valid Pandas DataFrame.")
+
+        train_cols = train.columns.values
+        test_cols = test.columns.values
+        common_cols = list(set(train_cols).intersection(set(test_cols)))
+        result = None
+        if common_cols:
+            print("A new DataFrame is generated combining training and test data...")
+            print("The common columns are: ")
+            print(common_cols)
+            result = pd.concat((train.loc[:, common_cols],
+                                test.loc[:, common_cols]), ignore_index=True)
+        else:
+            print("There is no common column in training and test data.")
+        return result
+
+
+    @staticmethod
     def prepare_for_learn(train, all_data, target):
         """
         Given the training data set and all data set and the predict variable, return the training and test data for
@@ -127,15 +156,59 @@ class data_stream(object):
         return X_train, X_test, y
 
 
-class data_describe(object):
+class DataDescribe(object):
     """
     This class will generally describe the input data, including statistical summaries, correlations between variables
-    feature importance etc.
+    feature importance etc. It is used for the training data.
     """
     def __init__(self, input):
         if not isinstance(input, pd.DataFrame):
             raise TypeError("Input data need to be Pandas DataFrame")
         self.data = input
+        self.numerical = None
+        self.categorical = None
+
+    @staticmethod
+    def calculate_empty(input_data, value=0):
+        """
+        Find the all the columns with empty values with descending order, where the number of the empty values is larger
+        than value
+        :param input_data: the input data as a Pandas DataFrame
+        :param value: the minimum number of the empty values in the column
+        :return: A Pandas Series having empty values with column name and number of empty values
+        """
+        if not isinstance(input_data, pd.DataFrame):
+            raise TypeError("Input data is not a valid Pandas DataFrame")
+        columns = input_data.isnull().sum()
+        columns = columns[columns > value]
+        columns.sort_values(ascending=False, inplace=True)
+        return columns
+
+    def find_empty(self, value=0):
+        """
+        Show the features with missing values in descending order, in which the number of missing values is larger than
+        value
+        :param value: the number of missing values
+        :return: Nothing
+        """
+        missing = DataDescribe.calculate_empty(self.data, value)
+        if not missing.empty:
+            print("The features below have missing values:")
+            print(list(missing.index))
+            print(missing.plot.bar())
+
+    def find_column_types(self, exclude=None):
+        columns = list(self.data.columns)
+        if exclude and isinstance(exclude, list):
+            for e in exclude:
+                if e in columns:
+                    columns.remove(e)
+            print("Excluding the columns as following:", exclude)
+
+        self.numerical = [f for f in columns if self.data.dtypes[f] != "object"]
+        print("The numerical features are", self.numerical)
+        self.categorical = [f for f in columns if self.data.dtypes[f] == "object"]
+        print("The categorical features are:", self.categorical)
 
     def summary(self):
         """
@@ -149,6 +222,12 @@ class data_describe(object):
         print(self.data.get_dtype_counts())
         print("The summary statistics excluding NaN values:")
         print(self.data.describe())
+
+    def show_numerical(self, exclude=None):
+        if self.numerical == None:
+            self.find_column_types(exclude)
+        Display.individual_variable(self.data, self.numerical,sns.distplot)
+
 
     def correlations(self, target, threshold=0.5):
         """
@@ -279,46 +358,6 @@ class DataCleaner(object):
             print(list(columns.index))
 
     @staticmethod
-    def union_datasets(train, test):
-        if not isinstance(train, pd.DataFrame):
-            raise TypeError("Training data is not a valid Pandas DataFrame.")
-        if not isinstance(test, pd.DataFrame):
-            raise TypeError("Test data is not valid Pandas DataFrame.")
-
-        train_cols = train.columns.values
-        test_cols = test.columns.values
-        common_cols = list(set(train_cols).intersection(set(test_cols)))
-        result = None
-        if common_cols:
-            print("\nThe common columns are: ")
-            print(common_cols)
-            result = pd.concat((train.loc[:, common_cols],
-                                test.loc[:, common_cols]), ignore_index=True)
-        else:
-            print("There is no common column in training and test data.")
-        return result
-
-    @staticmethod
-    def calculate_null(input_data, value=0):
-        """
-        Find the all the columns with empty values with descending order, where the number of the empty values is larger
-        than value
-        :param input_data: the input data as a Pandas DataFrame
-        :param value: the minimum number of the empty values in the column
-        :return: A Pandas Series having empty values with column name and number of empty values
-        """
-        if not isinstance(input_data, pd.DataFrame):
-            raise TypeError("Input data is not a valid Pandas DataFrame")
-        columns = input_data.isnull().sum()
-        columns = columns[columns > value]
-        columns.sort_values(ascending=False, inplace=True)
-        return columns
-
-    @staticmethod
-    def find_predictor(train_cols, test_cols):
-        return list(set(train_cols).difference(set(test_cols)))[0]
-
-    @staticmethod
     def current_empty(input_data):
         """
         Compute the list of the column names with empty values
@@ -332,7 +371,6 @@ class DataCleaner(object):
         else:
             print("There are no empty values in the data.")
         return cols
-
 
     def fill_na_spec(self, spec):
         if not isinstance(spec, dict):
@@ -456,9 +494,6 @@ class DataCleaner(object):
                 print("The columns to convert need to be a list.")
         print("\n Now the columns have been updated:")
         print(col)
-
-
-
 
     def save_learning(self, filename):
         X_train, X_test, y = self.prep_for_learn()
