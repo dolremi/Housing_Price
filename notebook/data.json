@@ -1,17 +1,1 @@
-{
-  "paths":
-           {"train" : "../data/train.csv",
-           "test" : "../data/test.csv"}
-          ,
-  "fill_dict":
-            {"NoBsmt": ["BsmtFinType1", "BsmtCond", "BsmtFinType2", "BsmtExposure", "BsmtQual"],
-             "NoGarage": ["GarageCond", "GarageQual", "GarageFinish", "GarageType"],
-             "NoPool": ["PoolQC"],
-             "NoFirePlace": ["FireplaceQu"],
-             "NoFence":["Fence"],
-             "NoAccess": ["Alley"],
-             "None": ["MiscFeature", "MasVnrType"]
-             },
-  "test": "test_data.p"
-
-}
+{"test": "submission2.p", "fill_dict": {"NoPool": ["PoolQC"], "NoGarage": ["GarageCond", "GarageQual", "GarageFinish", "GarageType"], "NoBsmt": ["BsmtFinType1", "BsmtCond", "BsmtFinType2", "BsmtExposure", "BsmtQual"], "NoFence": ["Fence"], "NoFirePlace": ["FireplaceQu"], "None": ["MiscFeature", "MasVnrType"], "NoAccess": ["Alley"]}, "paths": {"train": "../data/train.csv", "test": "../data/test.csv"}}

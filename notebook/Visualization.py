@@ -28,6 +28,12 @@ class Display:
             g = g.map(plot, "value")
 
     @staticmethod
+    def boxplot(x, y, **kwargs):
+        sns.boxplot(x=x, y=y)
+        x=plt.xticks(rotation=90)
+
+
+    @staticmethod
     def corr_heatmap(data):
         if not isinstance(data. pd.Dataframe):
             raise TypeError("Input data should be a Pandas DataFrame")
