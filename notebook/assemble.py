@@ -28,12 +28,11 @@ class DataStream(object):
     For data saving:
     """
     @staticmethod
-    def load_data(filename, unpickling=None):
+    def load_data(filename):
         """
-        Two ways to load data: from JSON file, from a Python object structure
+        Given JSON file including the paths to training and test set, return two raw data
         :param filename: a valid JSON file which contains the training and test data paths
-        :param unpickling: the key of de-serializing a valid Python object structure
-        :return: raw training data set, test data set and the total data set with common columns from two raw data
+        :return: raw training data set, test data set
         """
         if not os.path.exists(filename):
             raise ValueError("File " + filename + " does not exist.")
@@ -43,23 +42,40 @@ class DataStream(object):
 
         with open(filename) as data_file:
             data = json.load(data_file)
-        if unpickling:
-            try:
-                with open(data[unpickling], 'rb') as f:
-                    data_dict = pickle.load(f)
-                    return  data_dict["train"], data_dict["test"], data_dict["all"]
-            except Exception as e:
-                print("Unable to load the data from", data[unpickling], ":", e)
-        else:
-            train_path = data["paths"]["train"]
-            train = DataStream.data_load(train_path, "csv")
-            test_path = data["paths"]["test"]
-            test = DataStream.data_load(test_path, "csv")
-            all_data = DataStream.union_datasets(train, test)
-            return train, test, all_data
+
+        train_path = data["paths"]["train"]
+        train = DataStream.data_read(train_path, "csv")
+        test_path = data["paths"]["test"]
+        test = DataStream.data_read(test_path, "csv")
+        return train, test
 
     @staticmethod
-    def data_load(path, filetype):
+    def read_for_learn(filename, unpickling):
+        """
+        Given JSON file including the path to the Python Data Structure, read in train_X, test_X and Y for scikit learn
+        model learning
+        :param filename: a valid JSON file which contains the path to the Python Data Structure
+        :param unpickling: The key to the path
+        :return: train_X, test_X and Y
+        """
+
+        if not os.path.exists(filename):
+            raise ValueError("File " + filename + " does not exist.")
+
+        if filename[-4:] != "json":
+            raise ValueError(filename + " is not a valid JSON file that contains paths to training and test file.")
+
+        with open(filename) as data_file:
+            data = json.load(data_file)
+        try:
+            with open(data[unpickling], 'rb') as f:
+                data_dict = pickle.load(f)
+                return data_dict["train_x"], data_dict["test_x"], data_dict["y"]
+        except Exception as e:
+            print("Unable to load the data from", data[unpickling], ":", e)
+
+    @staticmethod
+    def data_read(path, filetype):
         """
         Load the data into a Pandas DataFrame, for csv file only
         :param path: The full path for the file to load data in
@@ -75,7 +91,7 @@ class DataStream(object):
         return pd.read_csv(path)
 
     @staticmethod
-    def save_dataset(filename, file_key, json_file, train, test, all_data):
+    def save_dataset(filename, file_key, json_file, train_X, test_X, Y):
         """
         Save the training, test and all data as a dictionary into a Python object structure
         :param filename: file name to save as a Python object structure
@@ -86,7 +102,7 @@ class DataStream(object):
         :param all_data: all data with the common columns from training and test data
         :return: None
         """
-        total = {"train": train, "test": test, "all": all_data}
+        total = {"train_X": train_X, "test_X": test_X, "y": Y}
         try:
             with open(filename, "wb") as f:
                 pickle.dump(total, f, pickle.HIGHEST_PROTOCOL)
@@ -94,6 +110,7 @@ class DataStream(object):
             print("Unable to save data to ", filename, ":", e)
 
         try:
+            json_decode = ""
             with open(json_file) as json_file:
                 json_decode = json.load(json_file)
 
@@ -286,13 +303,13 @@ class Category(object):
     def check_type(self):
         DataDescribe.check_types(self.data)
 
-    def transform(self, train, target):
+    def transform(self, train, target, weight=False):
         if isinstance(train, pd.DataFrame) and target in train.columns:
             for item in self.categories:
-                self.encode(train, item, target)
+                self.encode(train, item, target,weight)
                 self.encoded.append(item + "_E")
 
-    def encode(self, train, feature, target):
+    def encode(self, train, feature, target, weight=False):
         ordering = pd.DataFrame()
         if isinstance(train, pd.DataFrame) and feature in train.columns:
             ordering['val'] = train[feature].unique()
