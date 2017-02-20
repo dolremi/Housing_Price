@@ -84,5 +84,5 @@ tags
 */tmp.*
 */tmp/
 
-# pickle file
-.p
+
+.idea
