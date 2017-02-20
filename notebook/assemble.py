@@ -49,6 +49,7 @@ class DataStream(object):
         test = DataStream.data_read(test_path, "csv")
         return train, test
 
+
     @staticmethod
     def read_for_learn(filename, unpickling):
         """
@@ -70,7 +71,7 @@ class DataStream(object):
         try:
             with open(data[unpickling], 'rb') as f:
                 data_dict = pickle.load(f)
-                return data_dict["train_x"], data_dict["test_x"], data_dict["y"]
+                return data_dict["train_X"], data_dict["test_X"], data_dict["y"]
         except Exception as e:
             print("Unable to load the data from", data[unpickling], ":", e)
 
@@ -91,7 +92,7 @@ class DataStream(object):
         return pd.read_csv(path)
 
     @staticmethod
-    def save_dataset(filename, file_key, json_file, train_X, test_X, Y):
+    def save_dataset(filename, file_key, json_file_name, train_X, test_X, Y):
         """
         Save the training, test and all data as a dictionary into a Python object structure
         :param filename: file name to save as a Python object structure
@@ -104,22 +105,22 @@ class DataStream(object):
         """
         total = {"train_X": train_X, "test_X": test_X, "y": Y}
         try:
+            filename = "../data/modified/" + filename
             with open(filename, "wb") as f:
                 pickle.dump(total, f, pickle.HIGHEST_PROTOCOL)
         except Exception as e:
             print("Unable to save data to ", filename, ":", e)
 
         try:
-            json_decode = ""
-            with open(json_file) as json_file:
+            with open(json_file_name) as json_file:
                 json_decode = json.load(json_file)
 
             json_decode[file_key] = filename
 
-            with open(json_file, "w") as json_file:
+            with open(json_file_name, "w") as json_file:
                 json.dump(json_decode, json_file)
         except Exception as e:
-            print("Unable to add new file path to ", json_file, ":", e)
+            print("Unable to add new file path to ", json_file_name, ":", e)
 
     @staticmethod
     def union_datasets(train, test):
