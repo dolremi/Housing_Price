@@ -57,15 +57,16 @@ class Feature_Filter:
                 n_resampling=n_resample)
         rlasso.fit(self.x, self.y)
         # create a dict to store the ranks 
-        #rankdict={}
-        #rankdict["Rn_La"] = self.rank_to_dict(np.abs(rlasso.scores_), self.names)
+        rankdict={}
+        rankdict["Rn_La"] = self.rank_to_dict(np.abs(rlasso.scores_), self.names)
         #self.ranks_df = pd.DataFrame.from_dict(rankdict)
         #self.ranks_df = self.ranks_df.append(pd.DataFrame(self.rankdict))
-        return rlasso.scores_
+        #return rlasso.scores_
+        return rankdict
         
     def auto_select(self,N_searchCV=100):
         np.random.seed(1)
         self.tune_par_rand(N_search=N_searchCV)
-        scores = self.rand_lasso()
-        return scores
+        rankdict = self.rand_lasso()
+        return rankdict
         
