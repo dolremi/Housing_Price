@@ -1,4 +1,7 @@
  [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-technologies) Kaggle Competition
+For Data Analysis:
+* [Overall Summary notebook](notebook/Data/General_summary.ipynb)
+
 
 Currently there are two notebooks:
 * features.ipynb do all the data exploration, missing data handling and feature constructions
