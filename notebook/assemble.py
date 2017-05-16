@@ -594,7 +594,7 @@ def simple_categorical(data, threshold = 50):
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold,KFold
 from itertools import product
 
 class MeanEncoder:
