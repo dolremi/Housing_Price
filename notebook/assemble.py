@@ -9,6 +9,8 @@ import pickle
 import os
 import json
 from Visualization import Display
+from sklearn.model_selection import StratifiedKFold,KFold
+from itertools import product
 
 
 class DataStream(object):
@@ -592,10 +594,35 @@ def simple_categorical(data, threshold = 50):
     data = pd.get_dummies(data)
     return data
 
-import numpy as np
-import pandas as pd
-from sklearn.model_selection import StratifiedKFold,KFold
-from itertools import product
+class OrderEncoder:
+    def __init__(self, categorical_features):
+        self.categorical_features = categorical_features
+        self.orders = {}
+
+    @staticmethod
+    def order_encode_subroutine(X_train, variable, target, weight=False):
+        ordering = pd.DataFrame()
+        ordering['val'] = X_train[variable].unique()
+        ordering.index = ordering.val
+        ordering['spmean'] = X_train[[variable, target]].groupby(variable).mean()[target]
+        ordering = ordering.sort_values('spmean')
+        ordering['ordering'] = range(1, ordering.shape[0] + 1)
+        return ordering['ordering'].to_dict()
+
+
+    def fit_transform(self, X, target):
+        for variable in self.categorical_features:
+            ordering = OrderEncoder.order_encode_subroutine(X, variable, target)
+            self.orders[variable] = ordering
+            for key, val in ordering.items():
+                X[X[variable] == key, variable + "_E"] = val
+                X.drop(variable, axis=1, inplace=True)
+
+    def transform(self, X):
+        for variable in self.categorical_features:
+            for key, val in self.orders[variable].items():
+                X[X[variable] == key, variable + "_E"] = val
+                X.drop(variable, axis=1, inplace=True)
 
 class MeanEncoder:
     def __init__(self, categorical_features, n_splits=5, target_type='classification', prior_weight_func=None):
